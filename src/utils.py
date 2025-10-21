@@ -1,47 +1,83 @@
-import re
-import json
+import torch
+import torch.nn as nn
 
 
 
-def validate_response(func):
-    def wrapper(content: str):
-        content = func(content)
-        content = re.sub(r'(\{[^}]*\}).*', r'\1', content, flags=re.DOTALL)
-        content = re.sub(r'Answer.*|###.*|soft_skills[^]]*$', '', content, flags=re.DOTALL)
-        content = re.sub(r"'", '"', content)
-        content = re.sub(r'([{,])\s*([a-zA-Z0-9_]+)\s*:', r'\1"\2":', content)
-        try:            
-            return json.loads(content) 
-        except json.JSONDecodeError:
-            return
-    return wrapper
+
+class Similarity(nn.Module):
+    def __init__(self, temp):
+        super(Similarity, self).__init__()
+        self.temp = temp
+        self.cos = nn.CosineSimilarity(dim=-1)
+
+    def forward(self, x, y):
+        return self.cos(x, y) / self.temp
 
 
-@validate_response
-def conv_to_json(content: str):
-    return content
+class Pooler(nn.Module):
+    def __init__(self, pooler_type):
+        super(Pooler, self).__init__()
+        self.pooler_type = pooler_type
+
+        assert self.pooler_type in ["cls", "cls_before_pooler", "avg", "avg_top2", "avg_first_last"], "unrecognized pooling type %s" % self.pooler_type
+
+    def forward(self, attention_mask, outputs):
+        last_hidden = outputs.last_hidden_state
+        pooler_output = outputs.pooler_output
+        hidden_states = outputs.hidden_states
+
+        if self.pooler_type in ['cls_before_pooler', 'cls']:
+            return last_hidden[:, 0]
+        
+        elif self.pooler_type == "avg":
+            return ((last_hidden * attention_mask.unsqueeze(-1)).sum(1) / attention_mask.sum(-1).unsqueeze(-1))
+        
+        elif self.pooler_type == "avg_first_last":
+            first_hidden = hidden_states[1]
+            last_hidden = hidden_states[-1]
+            pooled_result = ((first_hidden + last_hidden) / 2.0 * attention_mask.unsqueeze(-1)).sum(1) / attention_mask.sum(-1).unsqueeze(-1)
+            return pooled_result
+        
+        elif self.pooler_type == "avg_top2":
+            second_last_hidden = hidden_states[-2]
+            last_hidden = hidden_states[-1]
+            pooled_result = ((last_hidden + second_last_hidden) / 2.0 * attention_mask.unsqueeze(-1)).sum(1) / attention_mask.sum(-1).unsqueeze(-1)
+            return pooled_result
+        else:
+            raise NotImplementedError
 
 
+def prepare_features(examples, tokenizer, column_names: list):
+    sent0_name = column_names[0]
+    sent1_name = column_names[1]
+    sent2_name = column_names[2]
+    total = len(examples[sent0_name])
 
-class PromptSanitizer:
-    def __init__(self):
-        pass
-    def __sanitize(self, input_text: str, delimiter: str):
-        """Удаляет опасные конструкции из текста."""
-
-        sanitized_user_input = input_text.replace(delimiter, "")
-        return f"{delimiter}\n{sanitized_user_input}\n{delimiter}"
+    for idx in range(total):
+        if examples[sent0_name][idx] is None:
+            examples[sent0_name][idx] = " "
+        if examples[sent1_name][idx] is None:
+            examples[sent1_name][idx] = " "
     
-    def __remove_hashes(self, input_text: str):
-        cleaned_text = re.sub(r"[^\w\s\n]", "", input_text)
-        return cleaned_text
-    
-    def fix_response(self, content: str):
-        """Проверяет текст на соответствие правилам."""
-        return re.sub(r'Answer.*|###.*', '', content, flags=re.DOTALL)
-    
-    def get_completion_from_messages(self, input_text, delimiter):
-        """Проводит полную обработку текста."""
+    sentences = examples[sent0_name] + examples[sent1_name]
+    if sent2_name is not None:
+        for idx in range(total):
+            if examples[sent2_name][idx] is None:
+                examples[sent2_name][idx] = " "
+        sentences += examples[sent2_name]
+        
+    sent_features = tokenizer(
+        sentences,
+        padding="max_length",
+        truncation=True,
+        max_length=64
+    )
 
-        cleaned_text = self.__remove_hashes(input_text=input_text)
-        return self.__sanitize(cleaned_text, delimiter)
+    features = {}
+    if sent2_name is not None:
+        for key in sent_features:
+            features[key] = [[sent_features[key][i], sent_features[key][i+total], sent_features[key][i+total*2]] for i in range(total)]
+    else:
+        for key in sent_features:
+            features[key] = [[sent_features[key][i], sent_features[key][i+total]] for i in range(total)]
+    return features
