@@ -38,10 +38,8 @@ def jt_module(cls,
     )
 
     pooler_output = cls.pooler(attention_mask, outputs)
-    pooler_output = pooler_output.view((cls.data_args.batch_size, cls.data_args.num_sent, pooler_output.size(-1)))
-
-    # if cls.pooler_type == "cls":
-    #     pooler_output = cls.mlp(pooler_output)
+    batch_size = input_ids.size(0) // cls.data_args.num_sent
+    pooler_output = pooler_output.view(batch_size, cls.data_args.num_sent, -1)
 
     z1, z2, z3 = pooler_output[:,0], pooler_output[:,1], pooler_output[:, 2]
 
@@ -78,6 +76,98 @@ def jt_module(cls,
             [[0.0] * (cos_sim.size(-1) - z1_z3_cos.size(-1)) + [0.0] * i + [z3_weight] + [0.0] * (z1_z3_cos.size(-1) - i - 1) for i in range(z1_z3_cos.size(-1))]
         ).to(cls.device)
     cos_sim = cos_sim + weights
-
     loss = cls.loss_fun(cos_sim, labels)
+    
+    return loss
+
+
+
+def jd_module(cls,
+    encoder,
+    input_ids=None,
+    attention_mask=None,
+    token_type_ids=None,
+    position_ids=None,
+    head_mask=None,
+    inputs_embeds=None,
+    labels: torch.Tensor=None,
+    output_attentions=None,
+    output_hidden_states=None,
+    return_dict=None,
+    mlm_input_ids=None,
+    mlm_labels=None,
+):
+    return_dict = return_dict if return_dict is not None else cls.config.use_return_dict
+
+    input_ids = input_ids.view((-1, input_ids.size(-1)))
+    attention_mask = attention_mask.view((-1, attention_mask.size(-1))) 
+    labels = labels.to(torch.float32)
+
+    outputs = encoder(
+        input_ids,
+        attention_mask=attention_mask,
+        token_type_ids=token_type_ids,
+        position_ids=position_ids,
+        head_mask=head_mask,
+        inputs_embeds=inputs_embeds,
+        output_attentions=output_attentions,
+        output_hidden_states=True if cls.model_args.pooler_type in ['avg_top2', 'avg_first_last'] else False,
+        return_dict=True
+    )
+
+    pooler_output = cls.pooler(attention_mask, outputs)
+    batch_size = input_ids.size(0) // cls.data_args.jd_num_classes
+    pooler_output = pooler_output.view(batch_size, cls.data_args.jd_num_classes, -1)
+
+    premise, hypothesis = pooler_output[:, 0], pooler_output[:, 1]
+    
+    z = torch.cat((premise, 
+                  hypothesis, 
+                  torch.abs(hypothesis - premise), 
+                  hypothesis * premise), dim=1)
+    
+    output = cls.jd_classifier(z)
+    loss = cls.loss_fun_bce(output, labels)
+
+    return loss
+
+
+
+def jf_module(cls,
+    encoder,
+    input_ids=None,
+    attention_mask=None,
+    token_type_ids=None,
+    position_ids=None,
+    head_mask=None,
+    inputs_embeds=None,
+    labels: torch.Tensor=None,
+    output_attentions=None,
+    output_hidden_states=None,
+    return_dict=None,
+    mlm_input_ids=None,
+    mlm_labels=None,
+):
+    return_dict = return_dict if return_dict is not None else cls.config.use_return_dict
+
+    input_ids = input_ids.view((-1, input_ids.size(-1)))
+    attention_mask = attention_mask.view((-1, attention_mask.size(-1))) 
+    labels = labels.to(torch.float32)
+
+    outputs = encoder(
+        input_ids,
+        attention_mask=attention_mask,
+        token_type_ids=token_type_ids,
+        position_ids=position_ids,
+        head_mask=head_mask,
+        inputs_embeds=inputs_embeds,
+        output_attentions=output_attentions,
+        output_hidden_states=True if cls.model_args.pooler_type in ['avg_top2', 'avg_first_last'] else False,
+        return_dict=True
+    )
+
+    z = cls.pooler(attention_mask, outputs)        
+    output = cls.jf_classifier(z)
+    loss = cls.loss_fun_ce(output, labels)
+    
     return loss

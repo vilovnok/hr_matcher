@@ -15,7 +15,7 @@ from torch.utils.data.distributed import DistributedSampler
 from transformers.optimization import get_linear_schedule_with_warmup
 
 from src.model import JobMatchingMultiTaskModel
-
+from src.args import get_args
 
 
 
@@ -27,8 +27,10 @@ def setup(rank, world_size):
     backend = "nccl" if torch.cuda.is_available() else "gloo"
     dist.init_process_group(backend, rank=rank, world_size=world_size)
 
+
 def cleanup():
     dist.destroy_process_group()
+
 
 def reduce_mean_tensor(tensor, world_size):
     if not torch.is_tensor(tensor):
@@ -36,6 +38,7 @@ def reduce_mean_tensor(tensor, world_size):
     dist.all_reduce(tensor, op=dist.ReduceOp.SUM)
     tensor = tensor / world_size
     return tensor
+
 
 def run_spawn(train_fn, world_size, model_args, data_args):
     mp.spawn(train_fn, args=(world_size, model_args, data_args), nprocs=world_size, join=True)
@@ -100,7 +103,6 @@ def train(rank, world_size, model_args, data_args):
         ddp_model = DDP(model)
     ddp_model.train()
 
-    criterion = nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.AdamW(
         params=ddp_model.parameters(), 
         lr=model_args.lr
@@ -110,8 +112,8 @@ def train(rank, world_size, model_args, data_args):
         num_warmup_steps=model_args.num_warmup_steps,
         num_training_steps=len(train_dataloader) * model_args.epochs
     )
+    
     scaler = torch.amp.GradScaler('cuda')
-
     for epoch in range(model_args.epochs):        
         sampler.set_epoch(epoch)
         epoch_losses = []
@@ -125,12 +127,15 @@ def train(rank, world_size, model_args, data_args):
         for batch_idx, batch in enumerate(progress):
             input_ids = batch["input_ids"].to(device, non_blocking=True)
             attention_mask = batch["attention_mask"].to(device, non_blocking=True)
+            jd_labels = batch["jd_labels"].to(device, non_blocking=True)
+            jf_labels = batch["jf_labels"].to(device, non_blocking=True)
 
             optimizer.zero_grad()
 
             with torch.amp.autocast('cuda'):
-                loss = ddp_model(input_ids, attention_mask)           
-            
+                total_loss_metadata = ddp_model(input_ids, attention_mask, jd_labels=jd_labels, jf_labels=jf_labels)           
+                loss = total_loss_metadata['total_loss']
+
             scaler.scale(loss).backward()
             scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(ddp_model.parameters(), max_norm=10.0)
@@ -168,5 +173,6 @@ def train(rank, world_size, model_args, data_args):
 
 
 if __name__ == "__main__":
+    model_args, data_args = get_args()
     world_size = torch.cuda.device_count() if torch.cuda.is_available() else 1
     run_spawn(train, world_size, model_args, data_args)
