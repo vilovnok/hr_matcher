@@ -13,6 +13,6 @@ bal.py
 .env
 src/actors/
 src/serve/
-# *.md
+*.md
 models.py
 sss/
