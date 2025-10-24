@@ -10,3 +10,6 @@ dags/
 glass/
 test.py
 bal.py
+.env
+actors/
+serve/
