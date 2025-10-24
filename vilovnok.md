@@ -15,9 +15,9 @@
     <img src="https://huggingface.co/front/assets/huggingface_logo-noborder.svg" alt="transformers" width="40" height="40"/>
   </a>
 
-  <a href="https://www.ray.io" target="_blank"> 
+  <!-- <a href="https://www.ray.io" target="_blank"> 
     <img src="https://github.com/ray-project/ray/raw/master/doc/source/images/ray_header_logo.png" alt="ray" width="140" height="40"/>
-  </a>
+  </a> -->
   
   <!-- <a href="https://mlflow.org" target="_blank"> 
     <img src="https://raw.githubusercontent.com/mlflow/mlflow/refs/heads/master/assets/logo.svg" alt="mlflow" width="45" height="40"/>
