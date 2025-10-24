@@ -13,3 +13,5 @@ bal.py
 .env
 src/actors/
 src/serve/
+*.md
+models.py
