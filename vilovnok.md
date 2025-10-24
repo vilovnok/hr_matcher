@@ -19,13 +19,13 @@
     <img src="https://github.com/ray-project/ray/raw/master/doc/source/images/ray_header_logo.png" alt="ray" width="140" height="40"/>
   </a>
   
-  <a href="https://mlflow.org" target="_blank"> 
+  <!-- <a href="https://mlflow.org" target="_blank"> 
     <img src="https://raw.githubusercontent.com/mlflow/mlflow/refs/heads/master/assets/logo.svg" alt="mlflow" width="45" height="40"/>
-  </a>
+  </a> -->
 
-  <a href="https://www.sbert.net" target="_blank"> 
+  <!-- <a href="https://www.sbert.net" target="_blank"> 
     <img src="	https://sbert.net/_static/logo.png" alt="sentence_transformers" width="65" height="40"/>
-  </a>
+  </a> -->
 
   <a href="https://optuna.readthedocs.io/en/stable/#" target="_blank"> 
     <img src="https://avatars.githubusercontent.com/u/57251745?s=280&v=4" alt="optuna" width="40" height="40"/>
