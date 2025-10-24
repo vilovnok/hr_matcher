@@ -11,5 +11,5 @@ glass/
 test.py
 bal.py
 .env
-actors/
-serve/
+src/actors/
+src/serve/
