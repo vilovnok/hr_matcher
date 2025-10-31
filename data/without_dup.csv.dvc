@@ -1,5 +1,0 @@
-outs:
-- md5: a6950ccdd856f85fd7346a42efc45275
-  size: 21383259
-  hash: md5
-  path: without_dup.csv
