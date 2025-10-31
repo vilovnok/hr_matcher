@@ -6,7 +6,7 @@ Multi-Stage-Pipeline-Skill-Extraction/
 __pycache__/
 trash/
 dags/
-test.ipynb
+# test.ipynb
 glass/
 test.py
 bal.py
