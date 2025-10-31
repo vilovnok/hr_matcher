@@ -6,7 +6,7 @@ Multi-Stage-Pipeline-Skill-Extraction/
 __pycache__/
 trash/
 dags/
-*.ipynb
+test.ipynb
 glass/
 test.py
 bal.py
@@ -14,5 +14,4 @@ bal.py
 src/actors/
 src/serve/
 *.md
-models.py
-sss/
+sandbox/dvcstore/
