@@ -20,15 +20,12 @@ accelerate config
 experiments/
 ├── train_stages.sh
 ├── test_stages.sh
-├── stage1/
-├── stage3/
-├── stage4/
-└── stage5/
+└── stage/
 ```
 
 ---
 
-## Exp. 1–2 — Bi-Encoder Retrieval
+## Exp. Bi-Encoder Retrieval
 
 Эксперименты с базовой bi-encoder архитектурой:
 
@@ -45,74 +42,4 @@ bash train_stages.sh stage1
 
 ```bash
 bash test_stages.sh stage1
-```
-
----
-
-## Exp. 3 — Multi-View Representation Learning
-
-Дообучение retrieval-модели с использованием multi-view представлений и дополнительных позитивных/негативных пар.
-
-### Обучение
-
-```bash
-bash train_stages.sh stage3
-```
-
-### Тестирование
-
-```bash
-bash test_stages.sh stage3
-```
-
----
-
-## Exp. 4 — Knowledge Distillation via Embeddings
-
-Дистилляция знаний через согласование векторных представлений teacher/student моделей.
-
-### Обучение
-
-```bash
-bash train_stages.sh stage4
-```
-
-### Тестирование
-
-```bash
-bash test_stages.sh stage4
-```
-
----
-
-## Exp. 5 — Hidden-State Knowledge Distillation
-
-Дистилляция знаний через внутренние скрытые представления модели.
-
-### Обучение
-
-```bash
-bash train_stages.sh stage5
-```
-
-### Тестирование
-
-```bash
-bash test_stages.sh stage5
-```
-
----
-
-## Запуск всех экспериментов
-
-### Полный цикл обучения
-
-```bash
-bash train_stages.sh all
-```
-
-### Полный цикл тестирования
-
-```bash
-bash test_stages.sh all
 ```
