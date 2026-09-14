@@ -1,4 +1,4 @@
-# HR Matcher
+# Talent Matcher
 
 Сервис для поиска резюме и вакансий.
 ![pipeline](assets/pipe.png)
